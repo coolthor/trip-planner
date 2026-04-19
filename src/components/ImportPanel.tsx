@@ -18,10 +18,16 @@ export function ImportPanel({ onImport, onLoadSample }: ImportPanelProps) {
     setError(null);
     try {
       const text = await file.text();
-      const data = parseICS(text);
-      onImport(data);
+      if (file.name.endsWith('.json')) {
+        const data = JSON.parse(text) as TripData;
+        if (!data.trip || !data.days) throw new Error('Invalid trip JSON format');
+        onImport(data);
+      } else {
+        const data = parseICS(text);
+        onImport(data);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to parse ICS file');
+      setError(e instanceof Error ? e.message : 'Failed to parse file');
     }
   }, [onImport]);
 
@@ -65,8 +71,9 @@ export function ImportPanel({ onImport, onLoadSample }: ImportPanelProps) {
             <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-washi-300 text-sm text-indigo2-800 hover:bg-washi-200/50 transition">
               <FileText size={16} />
               選擇檔案
-              <input type="file" accept=".ics,.ical" className="hidden" onChange={handleFileInput} />
+              <input type="file" accept=".ics,.ical,.json" className="hidden" onChange={handleFileInput} />
             </label>
+            <p className="text-[10px] text-sumi-500 mt-1">支援 .ics / .json 格式</p>
           </div>
 
           {error && (

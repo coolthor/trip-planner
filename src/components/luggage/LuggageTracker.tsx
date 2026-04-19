@@ -1,4 +1,4 @@
-import { Truck } from 'lucide-react';
+import { Truck, Pencil } from 'lucide-react';
 import { SoftCard } from '../ui/SoftCard';
 import { Stamp } from '../ui/Stamp';
 import { getIcon } from '../icons';
@@ -14,12 +14,17 @@ const LUG_STATES: Record<LuggageState, { label: string; icon: string; tone: stri
 interface LuggageTrackerProps {
   activeDay: number;
   route: LuggageStop[];
+  onEdit?: () => void;
 }
 
-export function LuggageTracker({ activeDay, route }: LuggageTrackerProps) {
+export function LuggageTracker({ activeDay, route, onEdit }: LuggageTrackerProps) {
   const current = route.find(r => r.day === activeDay) ?? route[0];
   const S = LUG_STATES[current.state];
   const CurIco = getIcon(S.icon);
+
+  const transitStops = route.filter(r => r.state === 'inTransit' || r.state === 'delivered');
+  const sendStop = route.find(r => r.state === 'inTransit');
+  const receiveStop = route.find(r => r.state === 'delivered');
 
   return (
     <SoftCard className="p-5">
@@ -28,7 +33,17 @@ export function LuggageTracker({ activeDay, route }: LuggageTrackerProps) {
           <div className="text-[10px] tracking-[0.3em] text-gold-600 uppercase">Luggage</div>
           <div className="font-serif-jp text-lg text-indigo2-900 font-semibold">行李狀態</div>
         </div>
-        <Stamp>荷物</Stamp>
+        <div className="flex items-center gap-2">
+          {onEdit && (
+            <button
+              onClick={onEdit}
+              className="p-1.5 rounded-lg text-sumi-500 hover:text-indigo2-800 hover:bg-washi-200/60 transition"
+            >
+              <Pencil size={14} />
+            </button>
+          )}
+          <Stamp>荷物</Stamp>
+        </div>
       </div>
 
       <div className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${S.tone}`}>
@@ -44,8 +59,8 @@ export function LuggageTracker({ activeDay, route }: LuggageTrackerProps) {
       </div>
 
       <div className="mt-5">
-        <div className="text-[10px] tracking-widest text-sumi-500 uppercase mb-2">9 日路線</div>
-        <div className="grid grid-cols-9 gap-1">
+        <div className="text-[10px] tracking-widest text-sumi-500 uppercase mb-2">{route.length} 日路線</div>
+        <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${route.length}, minmax(0, 1fr))` }}>
           {route.map((r) => {
             const s = LUG_STATES[r.state];
             const Ico = getIcon(s.icon);
@@ -62,20 +77,26 @@ export function LuggageTracker({ activeDay, route }: LuggageTrackerProps) {
         </div>
       </div>
 
-      <div className="sep-wave my-4" />
-      <div className="rounded-lg bg-washi-50 border border-washi-200 p-3">
-        <div className="flex items-center gap-1.5 text-[11px] text-gold-700 tracking-widest uppercase">
-          <Truck size={12} />行李寄送 · 5/10
-        </div>
-        <div className="mt-2 flex items-center gap-2 text-sm">
-          <div className="font-serif-jp text-sumi-800">戴衣提別府</div>
-          <div className="flex-1 h-0.5 lug-line" />
-          <Truck size={14} className="text-gold-600" />
-          <div className="flex-1 h-0.5 lug-line" />
-          <div className="font-serif-jp text-sumi-800">Oriental 天神</div>
-        </div>
-        <div className="text-[11px] text-sumi-500 mt-1">早上 check out 前辦理 · 5/11 下午送達</div>
-      </div>
+      {transitStops.length > 0 && sendStop && receiveStop && (
+        <>
+          <div className="sep-wave my-4" />
+          <div className="rounded-lg bg-washi-50 border border-washi-200 p-3">
+            <div className="flex items-center gap-1.5 text-[11px] text-gold-700 tracking-widest uppercase">
+              <Truck size={12} />行李寄送 · Day {sendStop.day}
+            </div>
+            <div className="mt-2 flex items-center gap-2 text-sm">
+              <div className="font-serif-jp text-sumi-800">{sendStop.loc.split('·')[0].trim()}</div>
+              <div className="flex-1 h-0.5 lug-line" />
+              <Truck size={14} className="text-gold-600" />
+              <div className="flex-1 h-0.5 lug-line" />
+              <div className="font-serif-jp text-sumi-800">{receiveStop.loc}</div>
+            </div>
+            <div className="text-[11px] text-sumi-500 mt-1">
+              {sendStop.sub ?? ''} · Day {receiveStop.day} {receiveStop.sub ?? '送達'}
+            </div>
+          </div>
+        </>
+      )}
     </SoftCard>
   );
 }
