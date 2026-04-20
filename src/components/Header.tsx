@@ -1,12 +1,30 @@
 import { CalendarDays, Users, Moon } from 'lucide-react';
 import { Stamp } from './ui/Stamp';
-import type { Trip } from '../types/trip';
+import type { Trip, Day } from '../types/trip';
 
 interface HeaderProps {
   trip: Trip;
+  days: Day[];
 }
 
-export function Header({ trip }: HeaderProps) {
+function getUniqueCities(days: Day[]): string {
+  const seen = new Set<string>();
+  const cities: string[] = [];
+  for (const d of days) {
+    const city = d.city.split(/[→·/]/).map(s => s.trim())[0];
+    if (city && !seen.has(city)) {
+      seen.add(city);
+      cities.push(city);
+    }
+  }
+  return cities.join(' — ');
+}
+
+export function Header({ trip, days }: HeaderProps) {
+  const titleParts = trip.title.split(/\s*[·]\s*/);
+  const cities = getUniqueCities(days);
+  const nights = days.length > 0 ? days.length - 1 : 0;
+
   return (
     <header className="relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
@@ -19,23 +37,22 @@ export function Header({ trip }: HeaderProps) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 mb-2">
               <Stamp>旅</Stamp>
-              <span className="text-[11px] tracking-[0.3em] text-sumi-500 uppercase">Kyushu · Spring 2026</span>
+              <span className="text-[11px] tracking-[0.3em] text-sumi-500 uppercase">Trip Planner</span>
             </div>
-            <h1 className="font-serif-jp text-[30px] sm:text-[40px] leading-tight text-indigo2-900 font-semibold whitespace-nowrap">
-              {trip.title.split(' · ')[0]} <span className="text-gold-600">·</span> {trip.title.split(' · ')[1]}
+            <h1 className="font-serif-jp text-[30px] sm:text-[40px] leading-tight text-indigo2-900 font-semibold">
+              {titleParts[0]}
+              {titleParts[1] && <> <span className="text-gold-600">·</span> {titleParts[1]}</>}
             </h1>
-            <p className="mt-2 font-serif-jp text-sumi-700 text-sm sm:text-base tracking-wide">
-              福岡 — 別府 — 由布院 — 天神
-            </p>
+            {cities && (
+              <p className="mt-2 font-serif-jp text-sumi-700 text-sm sm:text-base tracking-wide">
+                {cities}
+              </p>
+            )}
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-sumi-500">
               <span className="flex items-center gap-1.5"><CalendarDays size={14} />{trip.subtitle}</span>
-              <span className="flex items-center gap-1.5"><Users size={14} />{trip.travelers}</span>
-              <span className="flex items-center gap-1.5"><Moon size={14} />8 晚</span>
+              {trip.travelers && <span className="flex items-center gap-1.5"><Users size={14} />{trip.travelers}</span>}
+              <span className="flex items-center gap-1.5"><Moon size={14} />{nights} 晚</span>
             </div>
-          </div>
-          <div className="hidden md:flex flex-col items-end gap-1 shrink-0">
-            <div className="font-serif-jp text-indigo2-800 text-xl whitespace-nowrap">二〇二六</div>
-            <div className="font-serif-jp text-sumi-500 text-xs tracking-widest whitespace-nowrap">令和八年 · 皐月</div>
           </div>
         </div>
       </div>

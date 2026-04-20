@@ -167,7 +167,7 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
 
   return (
     <div className="min-h-screen">
-      <Header trip={data.trip} />
+      <Header trip={data.trip} days={data.days} />
       <DayTabs days={data.days} active={activeDay} onChange={setActiveDay} />
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
