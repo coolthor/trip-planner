@@ -8,6 +8,7 @@ import { HotelCard } from './components/lodging/HotelCard';
 import { LuggageTracker } from './components/luggage/LuggageTracker';
 import { LuggageEditor } from './components/luggage/LuggageEditor';
 import { TicketsPanel } from './components/tickets/TicketsPanel';
+import { TicketEditor } from './components/tickets/TicketEditor';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { ImportPanel } from './components/ImportPanel';
 import { EventEditor } from './components/EventEditor';
@@ -15,7 +16,7 @@ import { useWeather } from './hooks/useWeather';
 import { exportJSON, exportICS } from './lib/export';
 import { saveTrip, loadTrip, clearTrip } from './lib/storage';
 import { sampleTrip } from './data/sample-trip';
-import type { TripData, DayEvent, LuggageStop } from './types/trip';
+import type { TripData, DayEvent, LuggageStop, Ticket } from './types/trip';
 
 function ExportMenu({ data, onReset }: { data: TripData; onReset: () => void }) {
   const [open, setOpen] = useState(false);
@@ -61,10 +62,10 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
   const [editing, setEditing] = useState(false);
   const [editingEvent, setEditingEvent] = useState<{ index: number; event?: DayEvent } | null>(null);
   const [editingLuggage, setEditingLuggage] = useState(false);
+  const [editingTicket, setEditingTicket] = useState<{ ticket?: Ticket } | null>(null);
 
   const day = data.days.find(d => d.id === activeDay) ?? data.days[0];
   const stayHotel = day.stayId ? data.hotels[day.stayId] : null;
-  const hasTickets = Object.keys(data.tickets).length > 0;
 
   const { getWeather, loading: weatherLoading } = useWeather(data.days);
 
@@ -95,6 +96,18 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
   const handleSaveLuggage = useCallback((route: LuggageStop[]) => {
     onUpdate({ ...data, luggageRoute: route });
     setEditingLuggage(false);
+  }, [data, onUpdate]);
+
+  const handleSaveTicket = useCallback((ticket: Ticket) => {
+    const tickets = { ...data.tickets, [ticket.id]: ticket };
+    onUpdate({ ...data, tickets });
+    setEditingTicket(null);
+  }, [data, onUpdate]);
+
+  const handleDeleteTicket = useCallback((id: string) => {
+    const { [id]: _, ...rest } = data.tickets;
+    onUpdate({ ...data, tickets: rest });
+    setEditingTicket(null);
   }, [data, onUpdate]);
 
   return (
@@ -185,11 +198,22 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
                 onEdit={() => setEditingLuggage(true)}
               />
             )}
-            {hasTickets && (
-              <>
-                <SectionHeader kanji="券" sub="Tickets" />
-                <TicketsPanel tickets={data.tickets} activeDay={activeDay} />
-              </>
+            <SectionHeader kanji="券" sub="Tickets" />
+            {editingTicket ? (
+              <TicketEditor
+                ticket={editingTicket.ticket}
+                totalDays={data.days.length}
+                onSave={handleSaveTicket}
+                onDelete={editingTicket.ticket ? () => handleDeleteTicket(editingTicket.ticket!.id) : undefined}
+                onCancel={() => setEditingTicket(null)}
+              />
+            ) : (
+              <TicketsPanel
+                tickets={data.tickets}
+                activeDay={activeDay}
+                onEdit={(t) => setEditingTicket({ ticket: t })}
+                onAdd={() => setEditingTicket({})}
+              />
             )}
           </aside>
         </div>
