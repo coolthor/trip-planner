@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Pencil, Plus, X, Download, FileJson, CalendarDays, RotateCcw } from 'lucide-react';
+import { Pencil, Plus, X, Download, FileJson, CalendarDays, RotateCcw, Upload } from 'lucide-react';
 import { Header } from './components/Header';
 import { DayTabs } from './components/DayTabs';
 import { DayOverview } from './components/DayOverview';
@@ -18,8 +18,24 @@ import { saveTrip, loadTrip, clearTrip } from './lib/storage';
 import { sampleTrip } from './data/sample-trip';
 import type { TripData, DayEvent, LuggageStop, Ticket } from './types/trip';
 
-function ExportMenu({ data, onReset }: { data: TripData; onReset: () => void }) {
+function TripMenu({ data, onReset, onImport }: { data: TripData; onReset: () => void; onImport: (data: TripData) => void }) {
   const [open, setOpen] = useState(false);
+
+  function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then(text => {
+      if (file.name.endsWith('.json')) {
+        const parsed = JSON.parse(text) as TripData;
+        if (parsed.trip && parsed.days) onImport(parsed);
+      } else {
+        import('./lib/ics-parser').then(({ parseICS }) => {
+          onImport(parseICS(text));
+        });
+      }
+    });
+    setOpen(false);
+  }
 
   return (
     <div className="relative">
@@ -28,30 +44,38 @@ function ExportMenu({ data, onReset }: { data: TripData; onReset: () => void }) 
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-sumi-500 hover:bg-washi-200/60 transition"
       >
         <Download size={14} />
-        匯出
+        選單
       </button>
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-40 w-44 rounded-xl border border-washi-200 bg-washi-50 shadow-washi-lg overflow-hidden animate-fade-in-up">
-          <button
-            onClick={() => { exportJSON(data); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
-          >
-            <FileJson size={16} className="text-gold-600" />JSON 檔案
-          </button>
-          <button
-            onClick={() => { exportICS(data); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
-          >
-            <CalendarDays size={16} className="text-gold-600" />ICS 行事曆
-          </button>
-          <div className="border-t border-washi-200" />
-          <button
-            onClick={() => { onReset(); setOpen(false); }}
-            className="w-full flex items-center gap-2 px-4 py-3 text-sm text-vermillion hover:bg-vermillion/5 transition text-left"
-          >
-            <RotateCcw size={16} />重新開始
-          </button>
-        </div>
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full mt-1 z-40 w-48 rounded-xl border border-washi-200 bg-washi-50 shadow-washi-lg overflow-hidden animate-fade-in-up">
+            <button
+              onClick={() => { exportJSON(data); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
+            >
+              <FileJson size={16} className="text-gold-600" />匯出 JSON
+            </button>
+            <button
+              onClick={() => { exportICS(data); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
+            >
+              <CalendarDays size={16} className="text-gold-600" />匯出 ICS 行事曆
+            </button>
+            <div className="border-t border-washi-200" />
+            <label className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left cursor-pointer">
+              <Upload size={16} className="text-indigo2-800" />匯入行程
+              <input type="file" accept=".ics,.ical,.json" className="hidden" onChange={handleFileImport} />
+            </label>
+            <div className="border-t border-washi-200" />
+            <button
+              onClick={() => { onReset(); setOpen(false); }}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-vermillion hover:bg-vermillion/5 transition text-left"
+            >
+              <RotateCcw size={16} />重新開始
+            </button>
+          </div>
+        </>
       )}
     </div>
   );
@@ -117,7 +141,7 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
 
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         <div className="flex items-center justify-end gap-2">
-          <ExportMenu data={data} onReset={onReset} />
+          <TripMenu data={data} onReset={onReset} onImport={onUpdate} />
         </div>
 
         <DayOverview

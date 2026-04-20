@@ -20,7 +20,7 @@ export const sampleTrip: TripData = {
       nights: 2,
       dates: '5/6 – 5/8',
       status: 'booked',
-      map: 'https://maps.google.com/?q=Via+Inn+Hakataguchi+Ekimae',
+      map: 'https://maps.google.com/?q=ヴィアイン博多口駅前+福岡県福岡市博多区博多駅前1-16-13',
     },
     daiwa: {
       id: 'daiwa',
@@ -33,7 +33,7 @@ export const sampleTrip: TripData = {
       nights: 2,
       dates: '5/8 – 5/10',
       status: 'booked',
-      map: 'https://maps.google.com/?q=Daiwa+Roynet+Hotel+Beppu',
+      map: 'https://www.google.com/maps/place/%E3%83%80%E3%82%A4%E3%83%AF%E3%83%AD%E3%82%A4%E3%83%8D%E3%83%83%E3%83%88%E3%83%9B%E3%83%86%E3%83%AB%E5%88%A5%E5%BA%9C/@33.2846,131.4914,17z',
     },
     yufuku: {
       id: 'yufuku',
@@ -47,7 +47,7 @@ export const sampleTrip: TripData = {
       dates: '5/10 – 5/11',
       status: 'booked',
       tag: '溫泉旅館 · TWD 17,262 / 晚',
-      map: 'https://maps.google.com/?q=Yufuin+onsen+ryokan',
+      map: 'https://maps.google.com/?q=湯布院+譽福恩+大分県由布市湯布院町川上',
     },
     oriental: {
       id: 'oriental',
@@ -60,7 +60,7 @@ export const sampleTrip: TripData = {
       nights: 3,
       dates: '5/11 – 5/14',
       status: 'booked',
-      map: 'https://maps.google.com/?q=Hotel+Oriental+Express+Fukuoka+Tenjin',
+      map: 'https://maps.google.com/?q=オリエンタルエクスプレス福岡天神+福岡県福岡市中央区天神2丁目',
     },
   },
 

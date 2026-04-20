@@ -11,6 +11,12 @@ export function exportICS(data: TripData) {
     'VERSION:2.0',
     'PRODID:-//TripPlanner//EN',
     `X-WR-CALNAME:${data.trip.title}`,
+    `X-TRIP-DATA:${btoa(encodeURIComponent(JSON.stringify({
+      trip: data.trip,
+      hotels: data.hotels,
+      tickets: data.tickets,
+      luggageRoute: data.luggageRoute,
+    })))}`,
   ];
 
   for (const day of data.days) {
@@ -34,9 +40,16 @@ export function exportICS(data: TripData) {
       if (ev.hotelId && data.hotels[ev.hotelId]) {
         lines.push(`LOCATION:${escICS(data.hotels[ev.hotelId].address)}`);
       }
+      lines.push(`CATEGORIES:${ev.kind}`);
+      if (ev.hotelId) lines.push(`X-HOTEL-ID:${ev.hotelId}`);
+      if (ev.train) lines.push(`X-TRAIN-DATA:${btoa(encodeURIComponent(JSON.stringify(ev.train)))}`);
+      lines.push(`X-EVENT-ICON:${ev.icon}`);
       lines.push(`UID:${dateStr}-${pad(h)}${pad(m)}-${Math.random().toString(36).slice(2, 8)}@tripplanner`);
       lines.push('END:VEVENT');
     }
+
+    if (day.stayId) lines.push(`X-DAY-${day.id}-STAY:${day.stayId}`);
+    if (day.ticketId) lines.push(`X-DAY-${day.id}-TICKET:${day.ticketId}`);
   }
 
   lines.push('END:VCALENDAR');
