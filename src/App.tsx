@@ -11,7 +11,7 @@ import { TicketsPanel } from './components/tickets/TicketsPanel';
 import { TicketEditor } from './components/tickets/TicketEditor';
 import { SectionHeader } from './components/ui/SectionHeader';
 import { ImportPanel } from './components/ImportPanel';
-import { EventEditor } from './components/EventEditor';
+import { EventEditor, type EventSavePayload } from './components/EventEditor';
 import { useWeather } from './hooks/useWeather';
 import { exportJSON, exportICS } from './lib/export';
 import { saveTrip, loadTrip, clearTrip } from './lib/storage';
@@ -131,17 +131,53 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
     });
   }, [data, onUpdate]);
 
-  const handleAddEvent = useCallback((event: DayEvent) => {
-    const events = [...day.events, event].sort((a, b) => a.time.localeCompare(b.time));
-    updateDayEvents(day.id, events);
-    setEditingEvent(null);
-  }, [day, updateDayEvents]);
+  const applyEventPayload = useCallback((payload: EventSavePayload, existingEvents: DayEvent[], dayId: number, insertIndex?: number) => {
+    let newData = { ...data };
 
-  const handleEditEvent = useCallback((index: number, event: DayEvent) => {
-    const events = day.events.map((e, i) => i === index ? event : e).sort((a, b) => a.time.localeCompare(b.time));
-    updateDayEvents(day.id, events);
+    if (payload.hotel) {
+      newData = { ...newData, hotels: { ...newData.hotels, [payload.hotel.id]: payload.hotel } };
+    }
+
+    const stayDayIds = payload.stayDayIds ?? (payload.setAsStay ? [dayId] : []);
+    const checkInDayId = stayDayIds.length > 0 ? stayDayIds[0] : dayId;
+    const targetDayId = payload.hotel ? checkInDayId : dayId;
+
+    newData = {
+      ...newData,
+      days: newData.days.map(d => {
+        let updated = { ...d };
+
+        if (d.id === targetDayId) {
+          const base = targetDayId === dayId ? existingEvents : [...d.events];
+          const events = insertIndex !== undefined && insertIndex >= 0
+            ? base.map((e, i) => i === insertIndex ? payload.event : e)
+            : [...base, payload.event];
+          updated.events = events.sort((a, b) => a.time.localeCompare(b.time));
+        }
+
+        if (stayDayIds.includes(d.id) && payload.event.hotelId) {
+          updated.stayId = payload.event.hotelId;
+        }
+
+        if (payload.checkOutEvent && d.id === payload.checkOutEvent.dayId) {
+          updated.events = [...updated.events, payload.checkOutEvent.event].sort((a, b) => a.time.localeCompare(b.time));
+        }
+
+        return updated;
+      }),
+    };
+
+    onUpdate(newData);
     setEditingEvent(null);
-  }, [day, updateDayEvents]);
+  }, [data, onUpdate]);
+
+  const handleAddEvent = useCallback((payload: EventSavePayload) => {
+    applyEventPayload(payload, day.events, day.id);
+  }, [day, applyEventPayload]);
+
+  const handleEditEvent = useCallback((index: number, payload: EventSavePayload) => {
+    applyEventPayload(payload, day.events, day.id, index);
+  }, [day, applyEventPayload]);
 
   const handleDeleteEvent = useCallback((index: number) => {
     const events = day.events.filter((_, i) => i !== index);
@@ -220,11 +256,14 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
             {editingEvent && (
               <EventEditor
                 event={editingEvent.index >= 0 ? editingEvent.event : undefined}
-                onSave={(ev) => {
+                existingHotel={editingEvent.event?.hotelId ? data.hotels[editingEvent.event.hotelId] : undefined}
+                days={data.days}
+                currentDayId={activeDay}
+                onSave={(payload) => {
                   if (editingEvent.index >= 0) {
-                    handleEditEvent(editingEvent.index, ev);
+                    handleEditEvent(editingEvent.index, payload);
                   } else {
-                    handleAddEvent(ev);
+                    handleAddEvent(payload);
                   }
                 }}
                 onCancel={() => setEditingEvent(null)}
