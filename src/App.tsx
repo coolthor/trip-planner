@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Pencil, Plus, X, Download, FileJson, CalendarDays, RotateCcw, Upload } from 'lucide-react';
+import { Pencil, Plus, X, Download, FileJson, CalendarDays, RotateCcw, Upload, Share2, Check } from 'lucide-react';
 import { Header } from './components/Header';
 import { DayTabs } from './components/DayTabs';
 import { DayOverview } from './components/DayOverview';
@@ -15,11 +15,22 @@ import { EventEditor } from './components/EventEditor';
 import { useWeather } from './hooks/useWeather';
 import { exportJSON, exportICS } from './lib/export';
 import { saveTrip, loadTrip, clearTrip } from './lib/storage';
+import { copyShareURL, decodeTrip } from './lib/share';
 import { sampleTrip } from './data/sample-trip';
 import type { TripData, DayEvent, LuggageStop, Ticket } from './types/trip';
 
 function TripMenu({ data, onReset, onImport }: { data: TripData; onReset: () => void; onImport: (data: TripData) => void }) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  async function handleShare() {
+    const ok = await copyShareURL(data);
+    if (ok) {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+    setOpen(false);
+  }
 
   function handleFileImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -38,24 +49,43 @@ function TripMenu({ data, onReset, onImport }: { data: TripData; onReset: () => 
   }
 
   return (
-    <div className="relative">
+    <div className="flex items-center gap-2">
       <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-sumi-500 hover:bg-washi-200/60 transition"
+        onClick={handleShare}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition
+          ${copied
+            ? 'bg-onsen/10 text-onsen'
+            : 'text-sumi-500 hover:bg-washi-200/60'
+          }`}
       >
-        <Download size={14} />
-        選單
+        {copied ? <Check size={14} /> : <Share2 size={14} />}
+        {copied ? '已複製連結' : '分享'}
       </button>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full mt-1 z-40 w-48 rounded-xl border border-washi-200 bg-washi-50 shadow-washi-lg overflow-hidden animate-fade-in-up">
-            <button
-              onClick={() => { exportJSON(data); setOpen(false); }}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
-            >
-              <FileJson size={16} className="text-gold-600" />匯出 JSON
-            </button>
+      <div className="relative">
+        <button
+          onClick={() => setOpen(o => !o)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-sumi-500 hover:bg-washi-200/60 transition"
+        >
+          <Download size={14} />
+          選單
+        </button>
+        {open && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+            <div className="absolute right-0 top-full mt-1 z-40 w-48 rounded-xl border border-washi-200 bg-washi-50 shadow-washi-lg overflow-hidden animate-fade-in-up">
+              <button
+                onClick={handleShare}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
+              >
+                <Share2 size={16} className="text-indigo2-800" />分享連結
+              </button>
+              <div className="border-t border-washi-200" />
+              <button
+                onClick={() => { exportJSON(data); setOpen(false); }}
+                className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
+              >
+                <FileJson size={16} className="text-gold-600" />匯出 JSON
+              </button>
             <button
               onClick={() => { exportICS(data); setOpen(false); }}
               className="w-full flex items-center gap-2 px-4 py-3 text-sm text-sumi-800 hover:bg-washi-200/60 transition text-left"
@@ -74,9 +104,10 @@ function TripMenu({ data, onReset, onImport }: { data: TripData; onReset: () => 
             >
               <RotateCcw size={16} />重新開始
             </button>
-          </div>
-        </>
-      )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -254,7 +285,14 @@ function TripViewer({ data, onUpdate, onReset }: { data: TripData; onUpdate: (da
 }
 
 export default function App() {
-  const [tripData, setTripData] = useState<TripData | null>(() => loadTrip());
+  const [tripData, setTripData] = useState<TripData | null>(() => {
+    const fromHash = decodeTrip(window.location.hash);
+    if (fromHash) {
+      window.history.replaceState(null, '', window.location.pathname);
+      return fromHash;
+    }
+    return loadTrip();
+  });
 
   useEffect(() => {
     if (tripData) {
